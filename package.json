@@ -5,6 +5,7 @@
   "type": "module",
   "private": true,
   "scripts": {
+    "admin": "node src/server/adminServer.js",
     "check": "node src/jobs/checkStocks.js",
     "db:latest": "node src/jobs/showLatestSnapshots.js",
     "list:watchlist": "node src/jobs/listWatchlist.js",

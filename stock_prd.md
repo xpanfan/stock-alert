@@ -1034,6 +1034,134 @@ fail 0
 - Git 顯示 `LF will be replaced by CRLF` 是 Windows 換行格式提醒，不是錯誤。
 - 先前的 commit 和 push 都已成功。
 
+### 2026-06-04：Step 9A 已完成，建立最小本機管理頁
+
+完成內容：
+
+- 新增本機管理頁指令 `npm run admin`。
+- 管理頁會讀取 Supabase 的 `stocks` 資料表。
+- 第一版只顯示股票清單、名稱、市場、啟用狀態、備註。
+- 目前尚未加入新增、編輯、停用功能，這會放在 Step 9B/9C。
+- 管理頁透過本機 Node.js 伺服器讀 Supabase，不會把 service role key 放到瀏覽器端。
+
+新增或修改檔案：
+
+- `package.json`
+- `.gitignore`
+- `src/db/supabaseClient.js`
+- `src/server/adminServer.js`
+- `stock_prd.md`
+
+啟動管理頁：
+
+```powershell
+npm run admin
+```
+
+開啟網址：
+
+```text
+http://127.0.0.1:3000
+```
+
+如果 3000 已被其他服務占用，可以改用：
+
+```powershell
+$env:ADMIN_PORT=3001
+npm run admin
+```
+
+然後開啟：
+
+```text
+http://127.0.0.1:3001
+```
+
+目前驗證：
+
+- API 已成功從 Supabase 讀取 6 檔股票。
+- `npm test` 通過。
+
+目前測試結果：
+
+```text
+tests 14
+pass 14
+fail 0
+```
+
+### 2026-06-04：Step 9B 已完成，管理頁新增股票與價格欄位
+
+完成內容：
+
+- 管理頁新增股票表單。
+- 表單欄位包含：
+  - 股票代號
+  - 股票名稱
+  - 市場 `US` / `TW`
+  - 是否啟用
+- 新增股票會寫入 Supabase `stocks` 資料表。
+- 管理頁移除備註欄。
+- 股票列表新增：
+  - 目前股價
+  - 月均 `MA20`
+  - 季均 `MA60`
+  - 最新檢查時間
+- 價格欄位來自 Supabase `stock_price_snapshots` 中每檔股票最新一筆紀錄。
+
+新增或修改檔案：
+
+- `src/db/supabaseClient.js`
+- `src/server/adminServer.js`
+- `stock_prd.md`
+
+使用方式：
+
+```powershell
+npm run admin
+```
+
+如果使用 cmd 並且要改用 3001 port：
+
+```cmd
+set ADMIN_PORT=3001
+npm run admin
+```
+
+如果使用 PowerShell 並且要改用 3001 port：
+
+```powershell
+$env:ADMIN_PORT=3001
+npm run admin
+```
+
+開啟網址：
+
+```text
+http://127.0.0.1:3001
+```
+
+注意：
+
+- 如果管理頁已經開著，修改程式後需要停止原本的 `npm run admin`，再重新執行。
+- 新增股票後，價格、MA20、MA60 會在下一次 `npm run check` 或 GitHub Actions 排程跑完後出現。
+- 新股票代號必須符合 Yahoo Finance 格式，例如台股上市用 `.TW`，上櫃用 `.TWO`。
+
+目前驗證：
+
+- API 已成功從 Supabase 讀取股票清單與最新 snapshot。
+- `latest_price`、`ma20`、`ma60` 已可回傳到管理頁。
+- 未新增測試股票，避免污染正式追蹤清單。
+- `npm test` 通過。
+
+目前測試結果：
+
+```text
+tests 14
+pass 14
+fail 0
+```
+
 ### 2026-06-04：GitHub Actions 避免重複執行
 
 背景：

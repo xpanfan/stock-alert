@@ -82,6 +82,36 @@ export async function getEnabledStocksFromSupabase() {
   });
 }
 
+export async function getAllStocksFromSupabase() {
+  return supabaseRequest("stocks", {
+    query: {
+      select: "id,symbol,name,market,enabled,note,created_at,updated_at",
+      order: "symbol.asc"
+    }
+  });
+}
+
+export async function insertStock({
+  symbol,
+  name,
+  market,
+  enabled = true
+}) {
+  const rows = await supabaseRequest("stocks", {
+    method: "POST",
+    prefer: "return=representation",
+    body: {
+      symbol,
+      name,
+      market,
+      enabled,
+      note: ""
+    }
+  });
+
+  return rows?.[0] ?? null;
+}
+
 export async function insertStockPriceSnapshot({
   stock,
   latestPrice,
@@ -117,6 +147,26 @@ export async function getLatestStockPriceSnapshots({ limit = 10 } = {}) {
       limit: String(limit)
     }
   });
+}
+
+export async function getLatestSnapshotsBySymbol({ limit = 200 } = {}) {
+  const snapshots = await supabaseRequest("stock_price_snapshots", {
+    query: {
+      select: "symbol,latest_price,ma20,ma60,should_alert,checked_at",
+      order: "checked_at.desc",
+      limit: String(limit)
+    }
+  });
+
+  const latestBySymbol = new Map();
+
+  for (const snapshot of snapshots) {
+    if (!latestBySymbol.has(snapshot.symbol)) {
+      latestBySymbol.set(snapshot.symbol, snapshot);
+    }
+  }
+
+  return latestBySymbol;
 }
 
 export async function hasAlertLogToday({ symbol, alertType = ALERT_TYPE_BELOW_MA20_MA60, now = new Date() }) {
