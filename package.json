@@ -1,0 +1,20 @@
+{
+  "name": "stock-alert",
+  "version": "0.1.0",
+  "description": "A simple stock and ETF moving-average alert tool.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "check": "node src/jobs/checkStocks.js",
+    "list:watchlist": "node src/jobs/listWatchlist.js",
+    "price": "node src/jobs/showStockPrices.js",
+    "line:test": "node src/jobs/sendLineTest.js",
+    "test": "node --test",
+    "test:ma": "node --test tests/movingAverage.test.js",
+    "test:alert": "node --test tests/shouldSendAlert.test.js",
+    "test:line": "node --test tests/lineClient.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

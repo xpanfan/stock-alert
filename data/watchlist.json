@@ -1,0 +1,44 @@
+[
+  {
+    "symbol": "9933.TW",
+    "name": "中鼎",
+    "market": "TW",
+    "enabled": true,
+    "note": ""
+  },
+  {
+    "symbol": "2353.TW",
+    "name": "宏碁",
+    "market": "TW",
+    "enabled": true,
+    "note": "User wrote 宏基; mapped to Acer 宏碁"
+  },
+  {
+    "symbol": "0050.TW",
+    "name": "元大台灣50",
+    "market": "TW",
+    "enabled": true,
+    "note": ""
+  },
+  {
+    "symbol": "5511.TWO",
+    "name": "德昌",
+    "market": "TW",
+    "enabled": true,
+    "note": "OTC stock; Yahoo Finance uses .TWO"
+  },
+  {
+    "symbol": "PLTR",
+    "name": "Palantir Technologies Inc.",
+    "market": "US",
+    "enabled": true,
+    "note": ""
+  },
+  {
+    "symbol": "GOOG",
+    "name": "Alphabet Inc.",
+    "market": "US",
+    "enabled": true,
+    "note": ""
+  }
+]
