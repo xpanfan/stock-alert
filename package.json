@@ -6,6 +6,7 @@
   "private": true,
   "scripts": {
     "check": "node src/jobs/checkStocks.js",
+    "db:latest": "node src/jobs/showLatestSnapshots.js",
     "list:watchlist": "node src/jobs/listWatchlist.js",
     "price": "node src/jobs/showStockPrices.js",
     "line:test": "node src/jobs/sendLineTest.js",

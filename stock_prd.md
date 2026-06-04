@@ -987,6 +987,53 @@ fail 0
 - GitHub Secrets 也要加入 `SUPABASE_SERVICE_ROLE_KEY`。
 - 推上 GitHub 後，手動執行一次 `Check Stocks` workflow，確認雲端也顯示 `Data source: Supabase`。
 
+### 2026-06-04：Step 8B 已完成，新增資料庫最近紀錄查詢
+
+背景：
+
+- 使用者執行 `npm run db:latest` 時出現 `Missing script: "db:latest"`。
+- 原因是該指令先前只是下一步建議，尚未實作。
+
+完成內容：
+
+- 新增 `db:latest` 指令。
+- 可從 Supabase 讀取最近 10 筆 `stock_price_snapshots`。
+- 可快速確認 GitHub Actions 或本機檢查是否持續寫入資料庫。
+
+新增或修改檔案：
+
+- `package.json`
+- `src/db/supabaseClient.js`
+- `src/jobs/showLatestSnapshots.js`
+- `stock_prd.md`
+
+執行指令：
+
+```powershell
+npm run db:latest
+```
+
+範例輸出：
+
+```text
+Latest snapshots:
+2026/6/4 18:43:39 | PLTR | price 142.20 | MA20 139.26 | MA60 143.54 | alert NO
+2026/6/4 18:43:39 | GOOG | price 355.68 | MA20 384.61 | MA60 341.32 | alert NO
+```
+
+目前驗證結果：
+
+```text
+tests 14
+pass 14
+fail 0
+```
+
+補充：
+
+- Git 顯示 `LF will be replaced by CRLF` 是 Windows 換行格式提醒，不是錯誤。
+- 先前的 commit 和 push 都已成功。
+
 ### 2026-06-04：GitHub Actions 避免重複執行
 
 背景：

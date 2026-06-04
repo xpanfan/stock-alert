@@ -109,6 +109,16 @@ export async function insertStockPriceSnapshot({
   return rows?.[0] ?? null;
 }
 
+export async function getLatestStockPriceSnapshots({ limit = 10 } = {}) {
+  return supabaseRequest("stock_price_snapshots", {
+    query: {
+      select: "symbol,latest_price,ma20,ma60,should_alert,checked_at",
+      order: "checked_at.desc",
+      limit: String(limit)
+    }
+  });
+}
+
 export async function hasAlertLogToday({ symbol, alertType = ALERT_TYPE_BELOW_MA20_MA60, now = new Date() }) {
   const startOfTaipeiDayUtc = getStartOfTaipeiDayUtc(now);
 
