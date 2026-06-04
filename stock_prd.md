@@ -1112,6 +1112,37 @@ pass 14
 fail 0
 ```
 
+### 2026-06-04：Step 9B 新增後立即更新價格
+
+背景：
+
+- 使用者新增股票後，股票已進入清單，但目前股價、MA20、MA60 沒有立即出現。
+- 原因是舊流程只新增 `stocks`，價格資料要等下一次 `npm run check` 或 GitHub Actions 才會寫入 `stock_price_snapshots`。
+
+修正內容：
+
+- 新增股票後，系統會立即抓該股票的 Yahoo Finance 價格資料。
+- 立即計算 `MA20` 與 `MA60`。
+- 立即寫入一筆 `stock_price_snapshots`。
+- 管理頁新增「更新價格」按鈕，可手動幫所有啟用股票重新抓價格並寫入 snapshot。
+- 「更新價格」不會發送 LINE，只更新管理頁資料。
+
+修改檔案：
+
+- `src/server/adminServer.js`
+- `stock_prd.md`
+
+目前驗證結果：
+
+```text
+refresh={"total":8,"succeeded":8,"failed":0,"errors":[]}
+stocks=8
+withSnapshot=8
+tests 14
+pass 14
+fail 0
+```
+
 ### 2026-06-04：Step 9B 已完成，管理頁新增股票與價格欄位
 
 完成內容：

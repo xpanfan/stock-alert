@@ -4,8 +4,12 @@ import {
   getAllStocksFromSupabase,
   getLatestSnapshotsBySymbol,
   insertStock,
+  insertStockPriceSnapshot,
   isSupabaseConfigured
 } from "../db/supabaseClient.js";
+import { shouldSendAlert } from "../alerts/shouldSendAlert.js";
+import { calculateMa20, calculateMa60 } from "../indicators/movingAverage.js";
+import { fetchDailyPrices } from "../market/fetchPrices.js";
 
 const host = "127.0.0.1";
 const port = Number(process.env.ADMIN_PORT ?? 3000);
@@ -66,6 +70,24 @@ function validateStockInput(input) {
   };
 }
 
+async function createInitialSnapshot(stock) {
+  const marketData = await fetchDailyPrices(stock.symbol);
+  const closingPrices = marketData.prices.map((row) => row.close);
+  const latestPrice = marketData.latestPrice;
+  const ma20 = calculateMa20(closingPrices);
+  const ma60 = calculateMa60(closingPrices);
+  const alertNeeded = shouldSendAlert({ latestPrice, ma20, ma60 });
+
+  return insertStockPriceSnapshot({
+    stock,
+    latestPrice,
+    ma20,
+    ma60,
+    shouldAlert: alertNeeded,
+    checkedAtIso: new Date().toISOString()
+  });
+}
+
 function getAdminHtml() {
   return `<!doctype html>
 <html lang="zh-Hant">
@@ -114,6 +136,13 @@ function getAdminHtml() {
         justify-content: space-between;
         gap: 16px;
         min-height: 64px;
+      }
+
+      .actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
       }
 
       h1 {
@@ -307,7 +336,10 @@ function getAdminHtml() {
     <header>
       <div class="wrap topbar">
         <h1>Stock Alert Admin</h1>
-        <button id="refreshButton" type="button">重新整理</button>
+        <div class="actions">
+          <button id="refreshPricesButton" type="button">更新價格</button>
+          <button id="refreshButton" type="button">重新整理</button>
+        </div>
       </div>
     </header>
     <main class="wrap">
@@ -364,6 +396,7 @@ function getAdminHtml() {
       const updatedText = document.querySelector("#updatedText");
       const stocksBody = document.querySelector("#stocksBody");
       const refreshButton = document.querySelector("#refreshButton");
+      const refreshPricesButton = document.querySelector("#refreshPricesButton");
       const addStockForm = document.querySelector("#addStockForm");
       const symbolInput = document.querySelector("#symbolInput");
       const nameInput = document.querySelector("#nameInput");
@@ -481,8 +514,8 @@ function getAdminHtml() {
 
           addStockForm.reset();
           enabledInput.checked = true;
-          summaryText.textContent = "已新增 " + payload.stock.symbol;
-          summaryText.className = "success";
+          summaryText.textContent = payload.warning || ("已新增 " + payload.stock.symbol);
+          summaryText.className = payload.warning ? "error" : "success";
           await loadStocks();
         } catch (error) {
           summaryText.textContent = error.message;
@@ -490,7 +523,34 @@ function getAdminHtml() {
         }
       }
 
+      async function refreshPrices() {
+        summaryText.textContent = "更新價格中";
+        summaryText.className = "";
+        refreshPricesButton.disabled = true;
+
+        try {
+          const response = await fetch("/api/refresh-prices", {
+            method: "POST"
+          });
+          const payload = await response.json();
+
+          if (!response.ok) {
+            throw new Error(payload.error || "更新價格失敗");
+          }
+
+          summaryText.textContent = "已更新 " + payload.succeeded + "/" + payload.total + " 檔";
+          summaryText.className = payload.failed > 0 ? "error" : "success";
+          await loadStocks();
+        } catch (error) {
+          summaryText.textContent = error.message;
+          summaryText.className = "error";
+        } finally {
+          refreshPricesButton.disabled = false;
+        }
+      }
+
       refreshButton.addEventListener("click", loadStocks);
+      refreshPricesButton.addEventListener("click", refreshPrices);
       addStockForm.addEventListener("submit", addStock);
       loadStocks();
     </script>
@@ -534,7 +594,56 @@ async function handleRequest(request, response) {
 
     const input = validateStockInput(await readJsonBody(request));
     const stock = await insertStock(input);
-    sendJson(response, 201, { stock });
+    let latestSnapshot = null;
+    let warning = null;
+
+    try {
+      latestSnapshot = await createInitialSnapshot(stock);
+    } catch (error) {
+      warning = `股票已新增，但目前無法取得價格資料：${error.message}`;
+    }
+
+    sendJson(response, 201, {
+      stock: {
+        ...stock,
+        latestSnapshot
+      },
+      warning
+    });
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/refresh-prices") {
+    if (!isSupabaseConfigured()) {
+      sendJson(response, 500, {
+        error: "Supabase is not configured."
+      });
+      return;
+    }
+
+    const stocks = await getAllStocksFromSupabase();
+    const enabledStocks = stocks.filter((stock) => stock.enabled);
+    let succeeded = 0;
+    const errors = [];
+
+    for (const stock of enabledStocks) {
+      try {
+        await createInitialSnapshot(stock);
+        succeeded += 1;
+      } catch (error) {
+        errors.push({
+          symbol: stock.symbol,
+          error: error.message
+        });
+      }
+    }
+
+    sendJson(response, 200, {
+      total: enabledStocks.length,
+      succeeded,
+      failed: errors.length,
+      errors
+    });
     return;
   }
 
