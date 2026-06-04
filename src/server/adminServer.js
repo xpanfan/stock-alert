@@ -281,6 +281,11 @@ function getAdminHtml() {
         text-align: right;
       }
 
+      .below-price {
+        color: var(--danger);
+        font-weight: 700;
+      }
+
       .muted {
         color: var(--muted);
       }
@@ -390,6 +395,19 @@ function getAdminHtml() {
         return new Date(value).toLocaleString("zh-TW", { hour12: false });
       }
 
+      function movingAverageCell(snapshot, key) {
+        const value = snapshot?.[key];
+
+        if (value === null || value === undefined) {
+          return '<td class="number">-</td>';
+        }
+
+        const isBelow = Number(snapshot.latest_price) < Number(value);
+        const className = isBelow ? "number below-price" : "number";
+
+        return '<td class="' + className + '">' + formatPrice(value) + '</td>';
+      }
+
       function renderStocks(stocks) {
         if (stocks.length === 0) {
           stocksBody.innerHTML = '<tr><td class="empty" colspan="8">沒有股票資料</td></tr>';
@@ -406,8 +424,8 @@ function getAdminHtml() {
             '<td>' + escapeHtml(stock.market) + '</td>' +
             '<td><span class="status ' + statusClass + '">' + statusText + '</span></td>' +
             '<td class="number">' + formatPrice(stock.latestSnapshot?.latest_price) + '</td>' +
-            '<td class="number">' + formatPrice(stock.latestSnapshot?.ma20) + '</td>' +
-            '<td class="number">' + formatPrice(stock.latestSnapshot?.ma60) + '</td>' +
+            movingAverageCell(stock.latestSnapshot, "ma20") +
+            movingAverageCell(stock.latestSnapshot, "ma60") +
             '<td class="muted">' + formatTime(stock.latestSnapshot?.checked_at) + '</td>' +
           '</tr>';
         }).join("");
