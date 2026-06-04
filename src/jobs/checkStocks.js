@@ -2,6 +2,13 @@ import { shouldSendAlert } from "../alerts/shouldSendAlert.js";
 import { sendLineMessage } from "../alerts/lineClient.js";
 import { loadEnvFile } from "../config/env.js";
 import { getEnabledWatchlist } from "../data/watchlist.js";
+import {
+  getEnabledStocksFromSupabase,
+  hasAlertLogToday,
+  insertAlertLog,
+  insertStockPriceSnapshot,
+  isSupabaseConfigured
+} from "../db/supabaseClient.js";
 import { calculateMa20, calculateMa60 } from "../indicators/movingAverage.js";
 import { fetchDailyPrices } from "../market/fetchPrices.js";
 
@@ -36,9 +43,20 @@ function buildAlertMessage({ stock, latestPrice, ma20, ma60, checkedAt }) {
   ].join("\n");
 }
 
-async function notifyIfNeeded({ stock, latestPrice, ma20, ma60, checkedAt }) {
+async function notifyIfNeeded({ stock, latestPrice, ma20, ma60, checkedAt, checkedAtIso, useDatabase }) {
   if (!shouldSendAlert({ latestPrice, ma20, ma60 })) {
     return false;
+  }
+
+  const message = buildAlertMessage({ stock, latestPrice, ma20, ma60, checkedAt });
+
+  if (useDatabase) {
+    const alreadySentToday = await hasAlertLogToday({ symbol: stock.symbol });
+
+    if (alreadySentToday) {
+      console.log("  Alert skipped: already sent today.");
+      return true;
+    }
   }
 
   const accessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
@@ -52,20 +70,30 @@ async function notifyIfNeeded({ stock, latestPrice, ma20, ma60, checkedAt }) {
   await sendLineMessage({
     accessToken,
     userId,
-    text: buildAlertMessage({ stock, latestPrice, ma20, ma60, checkedAt })
+    text: message
   });
 
   console.log("  LINE alert sent.");
+
+  if (useDatabase) {
+    await insertAlertLog({
+      stock,
+      message,
+      sentAtIso: checkedAtIso
+    });
+  }
+
   return true;
 }
 
-async function checkStock(stock) {
+async function checkStock(stock, { useDatabase }) {
   const marketData = await fetchDailyPrices(stock.symbol);
   const closingPrices = marketData.prices.map((row) => row.close);
   const latestPrice = marketData.latestPrice;
   const ma20 = calculateMa20(closingPrices);
   const ma60 = calculateMa60(closingPrices);
   const alertNeeded = shouldSendAlert({ latestPrice, ma20, ma60 });
+  const checkedAtIso = new Date().toISOString();
   const checkedAt = getTaipeiTime();
 
   console.log(`${stock.symbol} ${stock.name}`);
@@ -74,7 +102,19 @@ async function checkStock(stock) {
   console.log(`  MA60: ${formatPrice(ma60)}`);
   console.log(`  Should alert: ${alertNeeded ? "YES" : "NO"}`);
 
-  await notifyIfNeeded({ stock, latestPrice, ma20, ma60, checkedAt });
+  if (useDatabase) {
+    await insertStockPriceSnapshot({
+      stock,
+      latestPrice,
+      ma20,
+      ma60,
+      shouldAlert: alertNeeded,
+      checkedAtIso
+    });
+    console.log("  Snapshot saved.");
+  }
+
+  await notifyIfNeeded({ stock, latestPrice, ma20, ma60, checkedAt, checkedAtIso, useDatabase });
 
   return {
     symbol: stock.symbol,
@@ -88,15 +128,17 @@ async function checkStock(stock) {
 async function main() {
   loadEnvFile();
 
-  const stocks = await getEnabledWatchlist();
+  const useDatabase = isSupabaseConfigured();
+  const stocks = useDatabase ? await getEnabledStocksFromSupabase() : await getEnabledWatchlist();
   const results = [];
 
   console.log(`Checking ${stocks.length} stocks...`);
+  console.log(`Data source: ${useDatabase ? "Supabase" : "JSON watchlist"}`);
   console.log("");
 
   for (const stock of stocks) {
     try {
-      const result = await checkStock(stock);
+      const result = await checkStock(stock, { useDatabase });
       results.push(result);
     } catch (error) {
       console.error(`${stock.symbol} ${stock.name}`);

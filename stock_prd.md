@@ -855,3 +855,134 @@ GitHub Actions 警告修正：
 - 原因是 `actions/checkout@v4` 與 `actions/setup-node@v4` 使用的 action runtime 已過時。
 - 已更新為 `actions/checkout@v6` 與 `actions/setup-node@v6`。
 - 專案執行環境仍維持 `node-version: "20"`，這是我們自己的程式使用 Node.js 20，不是警告來源。
+
+### 2026-06-04：Step 8 已開始，已加入 Supabase 資料庫支援
+
+完成內容：
+
+- 建立 Supabase 資料表 SQL。
+- 建立 Supabase REST API 連線模組，不需要額外安裝 npm 套件。
+- `npm run check` 會自動判斷資料來源：
+  - 有 `SUPABASE_URL` 與 `SUPABASE_SERVICE_ROLE_KEY` 時，使用 Supabase。
+  - 沒有 Supabase 設定時，沿用 `data/watchlist.json`。
+- 使用 Supabase 時，會把每次檢查結果寫入 `stock_price_snapshots`。
+- 使用 Supabase 時，符合提醒條件前會先查 `alert_logs`。
+- 同一檔股票同一天同一提醒類型已通知過時，不會重複發 LINE。
+- GitHub Actions 已加入 Supabase Secrets。
+
+新增或修改檔案：
+
+- `.env.example`
+- `.github/workflows/check-stocks.yml`
+- `supabase/schema.sql`
+- `src/db/supabaseClient.js`
+- `src/jobs/checkStocks.js`
+- `stock_prd.md`
+
+Supabase SQL 檔案位置：
+
+```text
+supabase/schema.sql
+```
+
+需要在 Supabase SQL Editor 執行：
+
+```text
+supabase/schema.sql
+```
+
+本機 `.env` 需要新增：
+
+```text
+SUPABASE_URL=你的_Supabase_Project_URL
+SUPABASE_SERVICE_ROLE_KEY=你的_Supabase_Service_Role_Key
+```
+
+GitHub repository 也需要新增 Secrets：
+
+```text
+SUPABASE_URL
+SUPABASE_SERVICE_ROLE_KEY
+```
+
+GitHub Secrets 設定路徑：
+
+```text
+GitHub Repository
+Settings
+Secrets and variables
+Actions
+New repository secret
+```
+
+目前本機驗證：
+
+```text
+tests 13
+pass 13
+fail 0
+```
+
+尚未填 Supabase 設定時，批次檢查會顯示：
+
+```text
+Data source: JSON watchlist
+```
+
+填好 Supabase 設定後，批次檢查應顯示：
+
+```text
+Data source: Supabase
+```
+
+安全提醒：
+
+- `.env.example` 只能放空白範本，不可放真實 token。
+- 真實 token 只放在 `.env` 與 GitHub Secrets。
+- 如果 token 曾經被提交到 GitHub，請到 LINE 後台重新發行 token，並更新 `.env` 與 GitHub Secrets。
+
+### 2026-06-04：Step 8 Supabase 實際連線驗證完成
+
+完成內容：
+
+- 使用者已找到並設定 Supabase service role key。
+- 本機 `.env` 已填入 `SUPABASE_URL` 與 `SUPABASE_SERVICE_ROLE_KEY`。
+- `npm run check` 已成功切換到 Supabase 資料來源。
+- 6 檔股票都成功寫入 `stock_price_snapshots`。
+- 新增台灣日期起算時間測試，支援同一天不重複通知判斷。
+
+新增或修改檔案：
+
+- `package.json`
+- `src/db/supabaseClient.js`
+- `tests/supabaseClient.test.js`
+- `stock_prd.md`
+
+實際檢查結果摘要：
+
+```text
+Checking 6 stocks...
+Data source: Supabase
+Succeeded: 6/6
+Alerts: 0
+```
+
+完整測試結果：
+
+```text
+tests 14
+pass 14
+fail 0
+```
+
+目前已完成 Step 8 的核心需求：
+
+- 股票清單可從 Supabase 讀取。
+- 每次檢查結果會寫入資料庫。
+- 符合提醒條件時會先查 `alert_logs`，避免同一天同一狀態重複通知。
+
+仍需使用者確認：
+
+- GitHub Secrets 也要加入 `SUPABASE_URL`。
+- GitHub Secrets 也要加入 `SUPABASE_SERVICE_ROLE_KEY`。
+- 推上 GitHub 後，手動執行一次 `Check Stocks` workflow，確認雲端也顯示 `Data source: Supabase`。

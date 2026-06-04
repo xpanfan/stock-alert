@@ -12,7 +12,8 @@
     "test": "node --test",
     "test:ma": "node --test tests/movingAverage.test.js",
     "test:alert": "node --test tests/shouldSendAlert.test.js",
-    "test:line": "node --test tests/lineClient.test.js"
+    "test:line": "node --test tests/lineClient.test.js",
+    "test:supabase": "node --test tests/supabaseClient.test.js"
   },
   "engines": {
     "node": ">=20"
