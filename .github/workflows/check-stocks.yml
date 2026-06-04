@@ -5,6 +5,10 @@ on:
     - cron: "*/30 * * * *"
   workflow_dispatch:
 
+concurrency:
+  group: check-stocks
+  cancel-in-progress: true
+
 jobs:
   check-stocks:
     runs-on: ubuntu-latest

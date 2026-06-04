@@ -986,3 +986,25 @@ fail 0
 - GitHub Secrets 也要加入 `SUPABASE_URL`。
 - GitHub Secrets 也要加入 `SUPABASE_SERVICE_ROLE_KEY`。
 - 推上 GitHub 後，手動執行一次 `Check Stocks` workflow，確認雲端也顯示 `Data source: Supabase`。
+
+### 2026-06-04：GitHub Actions 避免重複執行
+
+背景：
+
+- 使用者在 GitHub Actions 看到兩個 `workflow_dispatch` 手動執行同時在跑。
+- 本地專案只有一個 workflow 檔案：`.github/workflows/check-stocks.yml`。
+- 兩個都顯示手動執行時，通常代表 `Run workflow` 被按了兩次，或頁面重送了一次。
+
+修正內容：
+
+- 已加入 GitHub Actions `concurrency` 設定。
+- 同一時間只允許一個 `Check Stocks` workflow 執行。
+- 如果新的檢查開始，尚未完成的舊檢查會被取消。
+
+設定內容：
+
+```yaml
+concurrency:
+  group: check-stocks
+  cancel-in-progress: true
+```
