@@ -848,3 +848,10 @@ fail 0
 - GitHub Actions 的 cron 時間使用 UTC，不是台灣時間。
 - 每 30 分鐘排程在 GitHub 免費方案可能有幾分鐘延遲，這是正常現象。
 - 只有當專案推送到 GitHub 後，GitHub Actions 才會開始執行。
+
+GitHub Actions 警告修正：
+
+- GitHub 顯示 `Node.js 20 actions are deprecated` 警告。
+- 原因是 `actions/checkout@v4` 與 `actions/setup-node@v4` 使用的 action runtime 已過時。
+- 已更新為 `actions/checkout@v6` 與 `actions/setup-node@v6`。
+- 專案執行環境仍維持 `node-version: "20"`，這是我們自己的程式使用 Node.js 20，不是警告來源。
